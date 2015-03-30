@@ -1,0 +1,141 @@
+#include "CBasefunction.h"
+#include <iostream>
+#include <unistd.h>
+
+#define messageSize 256
+int main(int argc, char *argv[])
+{
+	//The simulator isn't able to find the machine name alone, we have to hardcode it 
+	char * name_machine = "192.168.1.1";
+	int nbarg = argc;
+	char **argument = new char*[argc];
+	int i = 0;
+	for (i = 0; i <= nbarg; i++) 
+	{
+		argument[i] = argv[i];
+	}
+
+	//Communication initialization
+	COMMUNICATION_VECTOR myCvector;
+	
+	myCvector = init_communication(argument, NULL);
+
+	int ifmsg = 0;
+
+	int portID0, portID1;
+	int sock0, sock1;
+
+	vector_get(&(myCvector.vqueuing_port), 0, &portID0); 
+	vector_get(&(myCvector.vqueuing_socket), 0, &sock0); 
+
+	vector_get(&(myCvector.vqueuing_port), 0, &portID1); 
+	vector_get(&(myCvector.vqueuing_socket), 0, &sock1); 
+	 
+	 
+	char sMessage[messageSize];
+	const int c_takeoff_ms = 4*1000;//6*1000;
+	const int c_land_ms = 3*1000;//5*1000;
+	const int c_navdata_ms = 2*1000; 
+
+	const int c_interval_ms = 15;//30;
+	const int c_interval_us = c_interval_ms*1000;
+
+	int sequence = 1;
+
+	//int numbytes = 0; 
+	//const int c_at_sz = 1024; 
+ 	
+	//Initialization of the drone
+	char ftrim[] = "AT*FTRIM=1,\r";
+	
+	sequence++;
+	SEND_QUEUING_MESSAGE(name_machine, portID0, sock0, myCvector.emetteur, ftrim, messageSize);
+
+	usleep(100*1000);
+
+	const int c_takeoff = (1<<9)|(1<<18)|(1<<20)|(1<<22)|(1<<24)|(1<<28);
+	const int c_land = (1<<18)|(1<<20)|(1<<22)|(1<<24)|(1<<28);
+	
+	//We have to send several time the same command to be sure that the drone didn't miss it (UDP protocol => no packet loss management)
+	//Take off command
+	for (int i = 0; i < c_takeoff_ms; i+=c_interval_ms)
+	{
+		sprintf(sMessage, "AT*REF=%d,%d\r", sequence++, c_takeoff);
+		SEND_QUEUING_MESSAGE(name_machine, portID0, sock0, myCvector.emetteur, sMessage, messageSize);
+		usleep(c_interval_us);
+		memset(sMessage, 0, 30); 
+	}
+
+    	
+	/********************************/
+	/*struct hostent *s_h;
+	
+
+	if ((s_h = gethostbyname(name_machine)) == NULL) 
+	{
+		perror("gethostbyname :");
+		return (-1);
+	}
+	struct sockaddr_in s_a;
+	bzero((char *) &s_a, sizeof (s_a));
+	bcopy(s_h->h_addr, (char *) &s_a.sin_addr, s_h->h_length);
+	s_a.sin_family = htonl(s_h->h_addrtype); 
+	s_a.sin_port = htons(portID1);
+
+	//sendto(sock1, 1, 4, 0, (struct sockaddr *)&s_a, sizeof s_a);
+	char navdataInit[] = "AT*CONFIG=\"general:navdata_demo\",\"TRUE\"\r";
+	SEND_QUEUING_MESSAGE(name_machine, portID1, sock1, myCvector.emetteur, navdataInit, messageSize);
+	SEND_QUEUING_MESSAGE(name_machine, portID1, sock1, myCvector.emetteur, navdataInit, messageSize);
+	//usleep(1000);
+	char controlCommand[] = "AT*CTRL=0\r";
+	SEND_QUEUING_MESSAGE(name_machine, portID1, sock1, myCvector.emetteur, controlCommand, messageSize);
+	//usleep(1000);
+
+	Navdata_def navdata; 
+	char buffer[256];
+	for (int i = 0; i < c_navdata_ms; i+=30)
+	{
+		
+		//ifmsg = RECEIVE_QUEUING_MESSAGE(sock1, &navdata);
+                ifmsg=  recvfrom(sock1, buffer, 256, 0, (struct sockaddr *) &s_a, (socklen_t *) & s_a);
+		std::cout<<" <<<IFMSGGG " << ifmsg << std::endl;
+		if (ifmsg > 0)
+		{
+			for (int j = 0; j < 40 ; j++)
+			{std::cout<<" <<<CHAR " << buffer[j] << std::endl; }*/
+/*
+			std::cout << "NAVDATA theta" << navdata.theta << std::endl;
+			std::cout << "NAVDATA phi" << navdata.phi << std::endl;
+			std::cout << "NAVDATA psi" << navdata.psi << std::endl;
+			std::cout << "NAVDATA altitude" << navdata.altitude << std::endl;
+*/
+	/*	} 
+		else
+		{
+			std::cout << "<<< NO NAVDATA" << std::endl;
+		}
+	}
+
+        usleep(100*1000);
+*/
+    /******************************/
+
+	//Landing command
+	for (int i = 0; i < c_land_ms; i+=c_interval_ms)
+	{
+		sprintf(sMessage, "AT*REF=%d,%d\r", sequence++, c_land);
+		SEND_QUEUING_MESSAGE(name_machine, portID0, sock0, myCvector.emetteur, sMessage, messageSize);
+		usleep(c_interval_us);
+		memset(sMessage, 0, 30); 
+	}
+
+	//We put the partition in an infinite loop because the simulator keeps working
+	while(1)
+	{
+	 std::cout<<" End of control partition " <<std::endl;
+	}
+
+	return 0;
+}
+
+

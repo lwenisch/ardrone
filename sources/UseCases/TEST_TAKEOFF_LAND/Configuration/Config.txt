@@ -1,0 +1,8 @@
+% Test file process config
+%partition name
+%path process
+%time processing
+% Il ne doit pas y avoir d espace en plus !!
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+P1 /bin/program.elf 5000000
+P2 /data/video/takeoff_land_test.out 100000
